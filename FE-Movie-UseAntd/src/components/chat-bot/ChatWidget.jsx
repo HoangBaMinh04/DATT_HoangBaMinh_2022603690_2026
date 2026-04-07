@@ -27,6 +27,8 @@ const { TextArea } = Input;
 
 export default function ChatWidget({ isOpen, onClose, isLoggedIn }) {
   const [draft, setDraft] = useState("");
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const messageListRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -105,18 +107,18 @@ export default function ChatWidget({ isOpen, onClose, isLoggedIn }) {
     }
   };
 
-  const handleClear = async () => {
-    Modal.confirm({
-      title: "Xác nhận xóa",
-      icon: <ExclamationCircleOutlined />,
-      content: "Bạn có chắc muốn xóa toàn bộ lịch sử chat?",
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        await clearHistory();
-      },
-    });
+  const handleClear = () => {
+    setIsClearConfirmOpen(true);
+  };
+
+  const handleConfirmClear = async () => {
+    setClearing(true);
+    try {
+      await clearHistory();
+      setIsClearConfirmOpen(false);
+    } finally {
+      setClearing(false);
+    }
   };
 
   const getAvatarConfig = (role) => {
@@ -180,160 +182,196 @@ export default function ChatWidget({ isOpen, onClose, isLoggedIn }) {
   };
 
   return (
-    <Modal
-      title={
-        <Flex justify="space-between" align="center" style={{ width: "100%" }}>
-          <div>
-            <Title level={4} style={{ margin: 0, color: "#fff" }}>
-              🤖 Trợ lý AI
-            </Title>
-            {statisticsSummary ? (
-              <Text style={{ color: "rgba(255, 255, 255, 0.85)", fontSize: 12 }}>
-                Tổng tin nhắn: {statisticsSummary.total}
-                {statisticsSummary.lastInteraction && (
-                  <>
-                    {" "}| Lần cuối:{" "}
-                    {fmtLocal(statisticsSummary.lastInteraction, "DD/MM/YYYY HH:mm")}
-                  </>
-                )}
-              </Text>
-            ) : (
-              <Text style={{ color: "rgba(255, 255, 255, 0.85)", fontSize: 12 }}>
-                Hỏi tôi về lịch chiếu, phim và nhiều hơn nữa.
-              </Text>
-            )}
-          </div>
-          <Space>
-            <Tooltip title="Tải lại lịch sử">
-              <Button
-                type="text"
-                icon={<ReloadOutlined spin={loadingHistory} />}
-                onClick={refreshHistory}
-                disabled={loadingHistory}
-                style={{ color: "#fff" }}
-              />
-            </Tooltip>
-            <Tooltip title="Xóa lịch sử">
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                onClick={handleClear}
-                disabled={loadingHistory || sending}
-                style={{ color: "#fff" }}
-              />
-            </Tooltip>
-          </Space>
-        </Flex>
-      }
-      open={isOpen}
-      onCancel={onClose}
-      footer={null}
-      width={600}
-      styles={modalStyles}
-      centered
-      destroyOnClose
-    >
-      <div style={messageContainerStyle} ref={messageListRef}>
-        {loadingHistory ? (
-          <Flex justify="center" align="center" style={{ height: "100%" }}>
-            <Spin tip="Đang tải lịch sử trò chuyện..." />
-          </Flex>
-        ) : !hasMessages ? (
-          <Flex justify="center" align="center" style={{ height: "100%" }}>
-            <Paragraph type="secondary" style={{ textAlign: "center" }}>
-              💬 Hãy bắt đầu cuộc trò chuyện bằng cách nhập câu hỏi bên dưới.
-            </Paragraph>
-          </Flex>
-        ) : null}
-
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        )}
-
-        <Space direction="vertical" style={{ width: "100%" }} size={16}>
-          {messages.map((item) => {
-            const avatarConfig = getAvatarConfig(item.role);
-            const isUser = item.role === "user";
-
-            return (
-              <Flex
-                key={item.id}
-                justify={isUser ? "flex-end" : "flex-start"}
-                align="flex-start"
-                gap={8}
-              >
-                {!isUser && (
-                  <Avatar
-                    size={36}
-                    icon={avatarConfig.icon}
-                    style={avatarConfig.style}
-                  />
-                )}
-                <div>
-                  <div style={messageBubbleStyle(item.role)}>
-                    <Text style={{ color: isUser ? "#fff" : "#000" }}>
-                      {item.content}
-                    </Text>
-                  </div>
-                  {item.timestamp && (
-                    <Text
-                      type="secondary"
-                      style={{
-                        fontSize: 11,
-                        display: "block",
-                        textAlign: isUser ? "right" : "left",
-                        marginTop: 4,
-                      }}
-                    >
-                      {fmtLocalTime(item.timestamp, "HH:mm")}
-                    </Text>
-                  )}
-                </div>
-                {isUser && (
-                  <Avatar
-                    size={36}
-                    icon={avatarConfig.icon}
-                    style={avatarConfig.style}
-                  />
-                )}
-              </Flex>
-            );
-          })}
-        </Space>
-      </div>
-
-      <div style={formStyle}>
-        <Space.Compact style={{ width: "100%" }}>
-          <TextArea
-            ref={inputRef}
-            placeholder="Nhập câu hỏi của bạn..."
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoSize={{ minRows: 2, maxRows: 4 }}
-            style={{ borderRadius: "8px 0 0 8px" }}
-          />
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={handleSubmit}
-            loading={sending}
-            disabled={!draft.trim()}
-            style={{
-              height: "auto",
-              borderRadius: "0 8px 8px 0",
-              minHeight: 54,
-            }}
+    <>
+      <Modal
+        title={
+          <Flex
+            justify="space-between"
+            align="center"
+            style={{ width: "100%" }}
           >
-            {sending ? "Đang gửi" : "Gửi"}
-          </Button>
-        </Space.Compact>
-      </div>
-    </Modal>
+            <div>
+              <Title level={4} style={{ margin: 0, color: "#fff" }}>
+                🤖 Trợ lý AI
+              </Title>
+              {statisticsSummary ? (
+                <Text
+                  style={{ color: "rgba(255, 255, 255, 0.85)", fontSize: 12 }}
+                >
+                  Tổng tin nhắn: {statisticsSummary.total}
+                  {statisticsSummary.lastInteraction && (
+                    <>
+                      {" "}
+                      | Lần cuối:{" "}
+                      {fmtLocal(
+                        statisticsSummary.lastInteraction,
+                        "DD/MM/YYYY HH:mm",
+                      )}
+                    </>
+                  )}
+                </Text>
+              ) : (
+                <Text
+                  style={{ color: "rgba(255, 255, 255, 0.85)", fontSize: 12 }}
+                >
+                  Hỏi tôi về lịch chiếu, phim và nhiều hơn nữa.
+                </Text>
+              )}
+            </div>
+            <Space>
+              <Tooltip title="Tải lại lịch sử">
+                <Button
+                  type="text"
+                  icon={<ReloadOutlined spin={loadingHistory} />}
+                  onClick={refreshHistory}
+                  disabled={loadingHistory}
+                  style={{ color: "#fff" }}
+                />
+              </Tooltip>
+              <Tooltip title="Xóa lịch sử">
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  onClick={handleClear}
+                  disabled={loadingHistory || sending}
+                  style={{ color: "#fff" }}
+                />
+              </Tooltip>
+            </Space>
+          </Flex>
+        }
+        open={isOpen}
+        onCancel={onClose}
+        footer={null}
+        width={600}
+        styles={modalStyles}
+        centered
+        destroyOnClose
+      >
+        <div style={messageContainerStyle} ref={messageListRef}>
+          {loadingHistory ? (
+            <Flex justify="center" align="center" style={{ height: "100%" }}>
+              <Spin tip="Đang tải lịch sử trò chuyện..." />
+            </Flex>
+          ) : !hasMessages ? (
+            <Flex justify="center" align="center" style={{ height: "100%" }}>
+              <Paragraph type="secondary" style={{ textAlign: "center" }}>
+                💬 Hãy bắt đầu cuộc trò chuyện bằng cách nhập câu hỏi bên dưới.
+              </Paragraph>
+            </Flex>
+          ) : null}
+
+          {error && (
+            <Alert
+              message={error}
+              type="error"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          <Space direction="vertical" style={{ width: "100%" }} size={16}>
+            {messages.map((item) => {
+              const avatarConfig = getAvatarConfig(item.role);
+              const isUser = item.role === "user";
+
+              return (
+                <Flex
+                  key={item.id}
+                  justify={isUser ? "flex-end" : "flex-start"}
+                  align="flex-start"
+                  gap={8}
+                >
+                  {!isUser && (
+                    <Avatar
+                      size={36}
+                      icon={avatarConfig.icon}
+                      style={avatarConfig.style}
+                    />
+                  )}
+                  <div>
+                    <div style={messageBubbleStyle(item.role)}>
+                      <Text style={{ color: isUser ? "#fff" : "#000" }}>
+                        {item.content}
+                      </Text>
+                    </div>
+                    {item.timestamp && (
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: 11,
+                          display: "block",
+                          textAlign: isUser ? "right" : "left",
+                          marginTop: 4,
+                        }}
+                      >
+                        {fmtLocalTime(item.timestamp, "HH:mm")}
+                      </Text>
+                    )}
+                  </div>
+                  {isUser && (
+                    <Avatar
+                      size={36}
+                      icon={avatarConfig.icon}
+                      style={avatarConfig.style}
+                    />
+                  )}
+                </Flex>
+              );
+            })}
+          </Space>
+        </div>
+
+        <div style={formStyle}>
+          <Space.Compact style={{ width: "100%" }}>
+            <TextArea
+              ref={inputRef}
+              placeholder="Nhập câu hỏi của bạn..."
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoSize={{ minRows: 2, maxRows: 4 }}
+              style={{ borderRadius: "8px 0 0 8px" }}
+            />
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={handleSubmit}
+              loading={sending}
+              disabled={!draft.trim()}
+              style={{
+                height: "auto",
+                borderRadius: "0 8px 8px 0",
+                minHeight: 54,
+              }}
+            >
+              {sending ? "Đang gửi" : "Gửi"}
+            </Button>
+          </Space.Compact>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isClearConfirmOpen}
+        title={
+          <Space size={8}>
+            <ExclamationCircleOutlined />
+            Xác nhận xóa
+          </Space>
+        }
+        okText="Xóa"
+        okType="danger"
+        cancelText="Hủy"
+        onCancel={() => setIsClearConfirmOpen(false)}
+        onOk={handleConfirmClear}
+        confirmLoading={clearing}
+        zIndex={1600}
+        centered
+      >
+        <Paragraph style={{ marginBottom: 0 }}>
+          Bạn có chắc muốn xóa toàn bộ lịch sử chat?
+        </Paragraph>
+      </Modal>
+    </>
   );
 }
