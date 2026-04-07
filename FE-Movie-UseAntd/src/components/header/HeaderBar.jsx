@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Layout, Input, Button, Dropdown, Space, Avatar } from "antd";
+import { Layout, Input, Button, Dropdown, Space, Avatar, Modal } from "antd";
 import {
   SearchOutlined,
   UserOutlined,
@@ -67,7 +68,28 @@ export default function HeaderBar({
   isLoggedIn,
   showSearch = true,
 }) {
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const displayName = fullName?.trim() ? fullName.trim() : "bạn";
+
+  const handleAskLogout = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    if (!onLogout) {
+      setIsLogoutConfirmOpen(false);
+      return;
+    }
+
+    setIsLoggingOut(true);
+    try {
+      await onLogout();
+      setIsLogoutConfirmOpen(false);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const userMenuItems = [
     {
@@ -85,82 +107,100 @@ export default function HeaderBar({
   ];
 
   return (
-    <Header style={headerOuterStyle}>
-      <div style={headerInnerStyle}>
-        <Link to="/">
-          <img src={logo} alt="M-Movie" style={logoStyle} />
-        </Link>
+    <>
+      <Header style={headerOuterStyle}>
+        <div style={headerInnerStyle}>
+          <Link to="/">
+            <img src={logo} alt="M-Movie" style={logoStyle} />
+          </Link>
 
-      {showSearch ? (
-        <div style={searchContainerStyle}>
-          <Input
-            placeholder="Nhập tên phim bạn muốn tìm kiếm..."
-            prefix={<SearchOutlined style={{ color: "rgba(255,255,255,0.5)" }} />}
-            value={query}
-            onChange={(e) => onQueryChange?.(e.target.value)}
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              borderColor: "rgba(255, 255, 255, 0.2)",
-              color: "#fff",
-              borderRadius: 20,
-            }}
-            allowClear
-          />
-        </div>
-      ) : (
-        <div style={{ flex: 1 }} />
-      )}
+          {showSearch ? (
+            <div style={searchContainerStyle}>
+              <Input
+                placeholder="Nhập tên phim bạn muốn tìm kiếm..."
+                prefix={
+                  <SearchOutlined style={{ color: "rgba(255,255,255,0.5)" }} />
+                }
+                value={query}
+                onChange={(e) => onQueryChange?.(e.target.value)}
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  borderColor: "rgba(255, 255, 255, 0.2)",
+                  color: "#fff",
+                  borderRadius: 20,
+                }}
+                allowClear
+              />
+            </div>
+          ) : (
+            <div style={{ flex: 1 }} />
+          )}
 
-      <Space style={actionsStyle}>
-        {isLoggedIn ? (
-          <>
-            <Dropdown
-              menu={{ items: userMenuItems }}
-              trigger={["click"]}
-              placement="bottomRight"
-            >
-              <Button type="text" style={linkButtonStyle}>
-                <Space>
-                  <Avatar size="small" icon={<UserOutlined />} />
-                  Hi, {displayName}
-                  <DownOutlined style={{ fontSize: 10 }} />
-                </Space>
+          <Space style={actionsStyle}>
+            {isLoggedIn ? (
+              <>
+                <Dropdown
+                  menu={{ items: userMenuItems }}
+                  trigger={["click"]}
+                  placement="bottomRight"
+                >
+                  <Button type="text" style={linkButtonStyle}>
+                    <Space>
+                      <Avatar size="small" icon={<UserOutlined />} />
+                      Hi, {displayName}
+                      <DownOutlined style={{ fontSize: 10 }} />
+                    </Space>
+                  </Button>
+                </Dropdown>
+                <Button
+                  type="text"
+                  icon={<LogoutOutlined />}
+                  onClick={handleAskLogout}
+                  style={linkButtonStyle}
+                >
+                  Đăng xuất
+                </Button>
+              </>
+            ) : (
+              <Button type="text" onClick={onLogin} style={linkButtonStyle}>
+                Đăng nhập
               </Button>
-            </Dropdown>
+            )}
+
             <Button
               type="text"
-              icon={<LogoutOutlined />}
-              onClick={onLogout}
+              icon={<ShoppingCartOutlined />}
+              onClick={onOrders}
               style={linkButtonStyle}
             >
-              Đăng xuất
+              Đơn hàng
             </Button>
-          </>
-        ) : (
-          <Button type="text" onClick={onLogin} style={linkButtonStyle}>
-            Đăng nhập
-          </Button>
-        )}
 
-        <Button
-          type="text"
-          icon={<ShoppingCartOutlined />}
-          onClick={onOrders}
-          style={linkButtonStyle}
-        >
-          Đơn hàng
-        </Button>
+            <Button
+              type="primary"
+              icon={<RobotOutlined />}
+              onClick={onChat}
+              style={{ borderRadius: 16 }}
+            >
+              Chat AI
+            </Button>
+          </Space>
+        </div>
+      </Header>
 
-        <Button
-          type="primary"
-          icon={<RobotOutlined />}
-          onClick={onChat}
-          style={{ borderRadius: 16 }}
-        >
-          Chat AI
-        </Button>
-      </Space>
-      </div>
-    </Header> 
+      <Modal
+        open={isLogoutConfirmOpen}
+        title="Xác nhận đăng xuất"
+        okText="Đăng xuất"
+        okType="danger"
+        cancelText="Hủy"
+        onCancel={() => setIsLogoutConfirmOpen(false)}
+        onOk={handleConfirmLogout}
+        confirmLoading={isLoggingOut}
+        centered
+      >
+        Bạn có chắc muốn đăng xuất khỏi tài khoản này?
+      </Modal>
+    </>
   );
 }
