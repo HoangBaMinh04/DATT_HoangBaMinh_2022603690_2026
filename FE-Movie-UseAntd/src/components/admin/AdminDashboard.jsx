@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { fmtLocal, toLocalDayjs } from "../../utils/datetime";
+import { fmtLocal } from "../../utils/datetime";
 
 import {
   Layout,
@@ -8,6 +8,7 @@ import {
   Typography,
   Space,
   Avatar,
+  Dropdown,
   Row,
   Col,
   Card,
@@ -15,6 +16,8 @@ import {
   Alert,
   Spin,
   Select,
+  Modal,
+  message,
 } from "antd";
 import {
   DashboardOutlined,
@@ -31,6 +34,7 @@ import {
   FolderOpenOutlined,
   GlobalOutlined,
   MessageOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 
 import {
@@ -54,6 +58,7 @@ import {
   loadUserRoles,
   storeUserRoles,
 } from "../../utils/auth";
+import { logout as logoutApi } from "../../services/authService";
 import "../../css/adminCss/AdminDashboard.css";
 import CountryManagementPanel from "./CountryManagementPanel";
 import CategoryManagementPanel from "./CategoryManagementPanel";
@@ -430,6 +435,8 @@ export default function AdminDashboard() {
     resolveSectionFromPath(location.pathname),
   );
   const [collapsed, setCollapsed] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const errorMessage =
     activeSection === "dashboard"
@@ -918,6 +925,45 @@ export default function AdminDashboard() {
     disabled: !item.interactive,
   }));
 
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+      clearStoredRoles();
+      setAuthorized(false);
+      message.success("Đăng xuất thành công!");
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Logout error", error);
+      clearStoredRoles();
+      setAuthorized(false);
+      message.error("Có lỗi khi đăng xuất. Vui lòng thử lại.");
+      navigate("/", { replace: true });
+    }
+  };
+
+  const handleAskLogout = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await handleLogout();
+      setIsLogoutConfirmOpen(false);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const adminDropdownItems = [
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: "Đăng xuất",
+      danger: true,
+    },
+  ];
+
   return (
     <div className="adminDashboardPage">
       <Layout style={{ minHeight: "100vh" }}>
@@ -1017,15 +1063,28 @@ export default function AdminDashboard() {
             </div>
 
             <Space size="large">
-              <Space>
-                <Avatar style={{ backgroundColor: "#1677ff" }}>AD</Avatar>
-                <div style={{ lineHeight: 1.2 }}>
-                  <div style={{ fontWeight: 500 }}>Quản trị viên</div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Admin
-                  </Text>
-                </div>
-              </Space>
+              <Dropdown
+                trigger={["click"]}
+                placement="bottomRight"
+                menu={{
+                  items: adminDropdownItems,
+                  onClick: ({ key }) => {
+                    if (key === "logout") {
+                      handleAskLogout();
+                    }
+                  },
+                }}
+              >
+                <Space style={{ cursor: "pointer" }}>
+                  <Avatar style={{ backgroundColor: "#1677ff" }}>AD</Avatar>
+                  <div style={{ lineHeight: 1.2 }}>
+                    <div style={{ fontWeight: 500 }}>Quản trị viên</div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Admin
+                    </Text>
+                  </div>
+                </Space>
+              </Dropdown>
             </Space>
           </Header>
 
@@ -1259,6 +1318,20 @@ export default function AdminDashboard() {
             }
           />
         )}
+
+        <Modal
+          open={isLogoutConfirmOpen}
+          title="Xác nhận đăng xuất"
+          okText="Đăng xuất"
+          okType="danger"
+          cancelText="Hủy"
+          onCancel={() => setIsLogoutConfirmOpen(false)}
+          onOk={handleConfirmLogout}
+          confirmLoading={isLoggingOut}
+          centered
+        >
+          Bạn có chắc muốn đăng xuất khỏi tài khoản này?
+        </Modal>
       </Layout>
     </div>
   );
