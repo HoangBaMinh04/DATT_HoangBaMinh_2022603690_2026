@@ -272,13 +272,6 @@ export default function SupportChatWidget({ isLoggedIn }) {
               <span className="support-chat__header-title">
                 Hỗ trợ trực tuyến
               </span>
-              <span
-                className={`support-chat__status support-chat__status--${
-                  connected ? "online" : "offline"
-                }`}
-              >
-                {connected ? "Đang kết nối" : "Đang kết nối lại..."}
-              </span>
             </div>
             <button
               className="support-chat__close"
@@ -371,12 +364,25 @@ export default function SupportChatWidget({ isLoggedIn }) {
               title="Gửi"
             >
               <svg
-                width="20"
-                height="20"
+                className="support-chat__send-icon"
                 viewBox="0 0 24 24"
-                fill="currentColor"
+                fill="none"
+                aria-hidden="true"
               >
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                <path
+                  d="M22 2L11 13"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M22 2L15 22L11 13L2 9L22 2Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           </div>

@@ -124,7 +124,7 @@ export default function LoginForm({ onDone, goRegister, goForgot }) {
         </Form.Item>
       </Form>
 
-      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+      <Space size={20} style={{ width: "100%", justifyContent: "center" }} wrap>
         <Link onClick={goRegister}>Tạo tài khoản</Link>
         <Link onClick={goForgot}>Quên mật khẩu?</Link>
       </Space>

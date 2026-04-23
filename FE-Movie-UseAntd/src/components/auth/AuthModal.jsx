@@ -39,7 +39,7 @@ export default function AuthModal({
     (payload) => {
       onLoginSuccess?.(payload);
     },
-    [onLoginSuccess]
+    [onLoginSuccess],
   );
 
   const handleChangePasswordSuccess = useCallback(() => {
@@ -71,7 +71,7 @@ export default function AuthModal({
       open={true}
       onCancel={handleClose}
       footer={null}
-      title={getTitle()}
+      title={<div style={{ textAlign: "center" }}>{getTitle()}</div>}
       centered
       width={420}
       styles={modalStyles}
